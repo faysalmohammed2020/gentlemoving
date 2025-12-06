@@ -35,7 +35,7 @@ const Footer: React.FC = () => {
 
         {/* Copyright Section */}
         <p className="text-sm mb-4">
-         © 2025 Gentle Moving Inc. All rights reserved
+         Copyright 2013-2025 © gentlemoving.net All Rights Reserved
         </p>
 
         {/* Social Media Icons */}

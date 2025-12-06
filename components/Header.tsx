@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import Link from "next/link";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { VscAccount } from "react-icons/vsc";
@@ -17,7 +23,7 @@ interface Blog {
 
 type BlogListResponse =
   | { data: any[]; meta?: any } // new API
-  | any[];                     // old API
+  | any[]; // old API
 
 const HeaderMenu: React.FC = () => {
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -54,7 +60,7 @@ const HeaderMenu: React.FC = () => {
   }, [searchQuery]);
 
   const unwrapList = (json: BlogListResponse) =>
-    Array.isArray(json) ? json : (json.data || []);
+    Array.isArray(json) ? json : json.data || [];
 
   /**
    * ✅ Fetch ALL titles reliably:
@@ -62,50 +68,49 @@ const HeaderMenu: React.FC = () => {
    * - fetch pages until empty OR no new ids found
    * - DO NOT abort on hover leave (only unmount)
    */
-useEffect(() => {
-  if (hoveredMenu !== "blogs" || hasLoadedBlogs) return;
+  useEffect(() => {
+    if (hoveredMenu !== "blogs" || hasLoadedBlogs) return;
 
-  const controller = new AbortController();
+    const controller = new AbortController();
 
-  const fetchAllBlogTitles = async () => {
-    setBlogsLoading(true);
-    setBlogsError(null);
+    const fetchAllBlogTitles = async () => {
+      setBlogsLoading(true);
+      setBlogsError(null);
 
-    try {
-      const res = await fetch(`/api/blogpost?titles=1`, {
-        signal: controller.signal,
-        cache: "no-store",
-      });
+      try {
+        const res = await fetch(`/api/blogpost?titles=1`, {
+          signal: controller.signal,
+          cache: "no-store",
+        });
 
-      if (!res.ok) throw new Error("Failed to fetch titles");
+        if (!res.ok) throw new Error("Failed to fetch titles");
 
-      const list = await res.json(); // এখানে সরাসরি array আসবে
+        const list = await res.json(); // এখানে সরাসরি array আসবে
 
-      const mapped: Blog[] = (list || []).map((item: any) => {
-        const title = String(item.post_title || "");
-        return {
-          id: Number(item.id),
-          post_title: title,
-          _titleLower: title.toLowerCase(),
-        };
-      });
+        const mapped: Blog[] = (list || []).map((item: any) => {
+          const title = String(item.post_title || "");
+          return {
+            id: Number(item.id),
+            post_title: title,
+            _titleLower: title.toLowerCase(),
+          };
+        });
 
-      setBlogs(mapped);
-      setHasLoadedBlogs(true);
-    } catch (error: any) {
-      if (error?.name !== "AbortError") {
-        console.error("Error fetching blogs:", error);
-        setBlogsError("Failed to load blogs.");
+        setBlogs(mapped);
+        setHasLoadedBlogs(true);
+      } catch (error: any) {
+        if (error?.name !== "AbortError") {
+          console.error("Error fetching blogs:", error);
+          setBlogsError("Failed to load blogs.");
+        }
+      } finally {
+        setBlogsLoading(false);
       }
-    } finally {
-      setBlogsLoading(false);
-    }
-  };
+    };
 
-  fetchAllBlogTitles();
-  return () => controller.abort();
-}, [hoveredMenu, hasLoadedBlogs]);
-
+    fetchAllBlogTitles();
+    return () => controller.abort();
+  }, [hoveredMenu, hasLoadedBlogs]);
 
   const filteredBlogs = useMemo(() => {
     const MAX_RESULTS = 30;
@@ -120,7 +125,9 @@ useEffect(() => {
     const parts = text.split(regex);
     return parts.map((part, idx) =>
       part.toLowerCase() === query.toLowerCase() ? (
-        <span key={idx} className="text-blue-600">{part}</span>
+        <span key={idx} className="text-blue-600">
+          {part}
+        </span>
       ) : (
         <span key={idx}>{part}</span>
       )
@@ -158,15 +165,21 @@ useEffect(() => {
             onClick={() => setMobileMenuOpen((prev) => !prev)}
             className="text-white"
           >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isMobileMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
           </button>
         </div>
 
         {/* Desktop Nav */}
         <ul className="hidden text-black md:flex items-center space-x-10 font-semibold text-lg">
-          <li><Link href="/home">Home</Link></li>
+          <li>
+            <Link href="/home">Home</Link>
+          </li>
 
-          {/* Services Dropdown */}
+          {/* Services Dropdown
           <li
             className="group relative"
             onMouseEnter={() => handleMouseEnter("services")}
@@ -194,28 +207,16 @@ useEffect(() => {
                 </div>
               </div>
             )}
-          </li>
+          </li> */}
 
           {/* About Dropdown */}
-          <li
-            className="group relative"
-            onMouseEnter={() => handleMouseEnter("about")}
-            onMouseLeave={handleMouseLeave}
-          >
-            <div className="flex items-center cursor-pointer">
-              <span>About Us</span>
-              <ChevronDown className="ml-2 w-4 h-4 text-white" />
-            </div>
-            {hoveredMenu === "about" && (
-              <ul className="absolute left-0 mt-2 w-48 bg-white text-black shadow-lg rounded-xl opacity-100">
-                <li className="px-4 py-2 hover:text-blue-600">
-                  <Link href="/about-us">Testimonials</Link>
-                </li>
-              </ul>
-            )}
+          <li>
+            <Link href="/about-us">About Us</Link>
           </li>
 
-          <li><Link href="/contact">Contact</Link></li>
+          <li>
+            <Link href="/contact">Contact</Link>
+          </li>
 
           {/* Blog Dropdown */}
           <li
@@ -225,7 +226,7 @@ useEffect(() => {
           >
             <Link href="/blog" className="flex items-center">
               <span>Blog</span>
-              <ChevronDown className="ml-2 w-4 h-4 text-white" />
+              <ChevronDown className="ml-2 w-4 h-4 text-black" />
             </Link>
 
             {hoveredMenu === "blogs" && (
@@ -242,12 +243,17 @@ useEffect(() => {
                     />
                     <h4 className="text-lg font-bold">Explore Blogs</h4>
                     <p className="text-gray-600">
-                      Discover insights, tips, and stories on a variety of topics.
+                      Discover insights, tips, and stories on a variety of
+                      topics.
                     </p>
                   </div>
 
                   {/* Right list */}
-                  <div className={`${isHovered ? "w-full" : "w-2/3"} gap-4 pl-6 overflow-y-auto h-96`}>
+                  <div
+                    className={`${
+                      isHovered ? "w-full" : "w-2/3"
+                    } gap-4 pl-6 overflow-y-auto h-96`}
+                  >
                     <div
                       onMouseEnter={() => setIsHovered(true)}
                       onMouseLeave={() => setIsHovered(false)}
@@ -265,7 +271,9 @@ useEffect(() => {
 
                       <div className="scrollbar mt-4 space-y-3">
                         {blogsLoading ? (
-                          <p className="text-gray-500 text-sm">Loading blogs...</p>
+                          <p className="text-gray-500 text-sm">
+                            Loading blogs...
+                          </p>
                         ) : blogsError ? (
                           <p className="text-red-600 text-sm">{blogsError}</p>
                         ) : filteredBlogs.length > 0 ? (
@@ -278,12 +286,17 @@ useEffect(() => {
                                 href={`/blog/${blog.id}`}
                                 className="text-sm sm:text-base font-medium text-gray-800 hover:underline hover:text-orange-600"
                               >
-                                {renderHighlightedTitle(blog.post_title, debouncedQuery)}
+                                {renderHighlightedTitle(
+                                  blog.post_title,
+                                  debouncedQuery
+                                )}
                               </Link>
                             </div>
                           ))
                         ) : (
-                          <p className="text-red-800 text-sm">No blogs found...</p>
+                          <p className="text-red-800 text-sm">
+                            No blogs found...
+                          </p>
                         )}
                       </div>
                     </div>
@@ -319,11 +332,21 @@ useEffect(() => {
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <ul className="absolute top-16 left-0 w-full bg-white shadow-md flex flex-col text-lg md:hidden">
-          <li className="px-4 py-2 border-b"><Link href="/home">Home</Link></li>
-          <li className="px-4 py-2 border-b"><Link href="/services">Services</Link></li>
-          <li className="px-4 py-2 border-b"><Link href="/about-us/testimonial">About Us</Link></li>
-          <li className="px-4 py-2 border-b"><Link href="/contact">Contact</Link></li>
-          <li className="px-4 py-2 border-b"><Link href="/blog">Blog</Link></li>
+          <li className="px-4 py-2 border-b">
+            <Link href="/home">Home</Link>
+          </li>
+          <li className="px-4 py-2 border-b">
+            <Link href="/services">Services</Link>
+          </li>
+          <li className="px-4 py-2 border-b">
+            <Link href="/about-us/testimonial">About Us</Link>
+          </li>
+          <li className="px-4 py-2 border-b">
+            <Link href="/contact">Contact</Link>
+          </li>
+          <li className="px-4 py-2 border-b">
+            <Link href="/blog">Blog</Link>
+          </li>
         </ul>
       )}
     </header>
