@@ -584,11 +584,7 @@ export default function BlogPost() {
                       <p className="font-semibold text-slate-900 group-hover:text-cyan-700 line-clamp-2">
                         {p.post_title}
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {new Date(p.createdAt).toLocaleDateString()}
-                        {" • "}
-                        {(p.readTime ?? 1)} min read
-                      </p>
+                        
                       {pDesc && (
                         <p className="text-sm text-slate-600 mt-1 line-clamp-2">
                           {pDesc}...
