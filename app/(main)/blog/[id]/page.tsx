@@ -18,7 +18,6 @@ interface Blog {
   post_status?: "draft" | "publish" | "private" | string;
   imageUrl?: string;
   excerpt?: string;
-  readTime?: number;
 }
 
 /* ---------- helpers ---------- */
@@ -106,7 +105,6 @@ export default function BlogPost() {
           post_status: data.post_status ?? "draft",
           imageUrl: data.imageUrl,
           excerpt: data.excerpt,
-          readTime: data.readTime,
         };
 
         setPost(transformed);
@@ -495,8 +493,6 @@ export default function BlogPost() {
             day: "numeric",
           })}
         </span>
-        <span className="text-slate-300">•</span>
-        <span>{readTime} min read</span>
 
         {post.category && (
           <>

@@ -163,7 +163,7 @@ const HeaderMenu: React.FC = () => {
         <div className="md:hidden">
           <button
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="text-white"
+            className="text-black"
           >
             {isMobileMenuOpen ? (
               <X className="w-6 h-6" />
@@ -336,10 +336,7 @@ const HeaderMenu: React.FC = () => {
             <Link href="/home">Home</Link>
           </li>
           <li className="px-4 py-2 border-b">
-            <Link href="/services">Services</Link>
-          </li>
-          <li className="px-4 py-2 border-b">
-            <Link href="/about-us/testimonial">About Us</Link>
+            <Link href="/about-us">About Us</Link>
           </li>
           <li className="px-4 py-2 border-b">
             <Link href="/contact">Contact</Link>
