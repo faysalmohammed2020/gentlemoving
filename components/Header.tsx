@@ -18,12 +18,31 @@ import { useRouter } from "next/navigation";
 interface Blog {
   id: number;
   post_title: string;
+  slug: string;
   _titleLower: string;
+  _slugLower: string;
 }
 
 type BlogListResponse =
-  | { data: any[]; meta?: any } // new API
-  | any[]; // old API
+  | { data: unknown[]; meta?: unknown } // new API
+  | unknown[]; // old API
+
+// ✅ slugify helper
+function slugify(input: string) {
+  return (input || "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+}
+
+// ✅ safe extract
+function getString(v: unknown) {
+  return typeof v === "string" ? v : String(v ?? "");
+}
 
 const HeaderMenu: React.FC = () => {
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -59,14 +78,9 @@ const HeaderMenu: React.FC = () => {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  const unwrapList = (json: BlogListResponse) =>
-    Array.isArray(json) ? json : json.data || [];
-
   /**
-   * ✅ Fetch ALL titles reliably:
-   * - server may cap limit to 20, so we detect effectivePerPage from page1
-   * - fetch pages until empty OR no new ids found
-   * - DO NOT abort on hover leave (only unmount)
+   * ✅ Fetch ALL titles reliably
+   * API: /api/blogpost?titles=1 -> returns array
    */
   useEffect(() => {
     if (hoveredMenu !== "blogs" || hasLoadedBlogs) return;
@@ -85,18 +99,24 @@ const HeaderMenu: React.FC = () => {
 
         if (!res.ok) throw new Error("Failed to fetch titles");
 
-        const list = await res.json(); // এখানে সরাসরি array আসবে
+        const list = (await res.json()) as any[];
 
-        const mapped: Blog[] = (list || []).map((item: any) => {
-          const title = String(item.post_title || "");
+        const mapped: Blog[] = (Array.isArray(list) ? list : []).map((item) => {
+          const title = getString(item?.post_title);
+          const apiSlugRaw = getString(item?.slug).trim();
+
+          const s = apiSlugRaw || slugify(title);
+
           return {
-            id: Number(item.id),
+            id: Number(item?.id),
             post_title: title,
+            slug: s,
             _titleLower: title.toLowerCase(),
+            _slugLower: s.toLowerCase(),
           };
         });
 
-        setBlogs(mapped);
+        setBlogs(mapped.filter((b) => b.id && b.post_title && b.slug));
         setHasLoadedBlogs(true);
       } catch (error: any) {
         if (error?.name !== "AbortError") {
@@ -115,13 +135,20 @@ const HeaderMenu: React.FC = () => {
   const filteredBlogs = useMemo(() => {
     const MAX_RESULTS = 30;
     const q = debouncedQuery.toLowerCase();
+
     if (!q) return blogs.slice(0, MAX_RESULTS);
-    return blogs.filter((b) => b._titleLower.includes(q)).slice(0, MAX_RESULTS);
+
+    return blogs
+      .filter(
+        (b) => b._titleLower.includes(q) || b._slugLower.includes(q)
+      )
+      .slice(0, MAX_RESULTS);
   }, [blogs, debouncedQuery]);
 
   const renderHighlightedTitle = (text: string, query: string) => {
     if (!query) return text;
-    const regex = new RegExp(`(${query})`, "gi");
+    const safe = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`(${safe})`, "gi");
     const parts = text.split(regex);
     return parts.map((part, idx) =>
       part.toLowerCase() === query.toLowerCase() ? (
@@ -179,37 +206,6 @@ const HeaderMenu: React.FC = () => {
             <Link href="/home">Home</Link>
           </li>
 
-          {/* Services Dropdown
-          <li
-            className="group relative"
-            onMouseEnter={() => handleMouseEnter("services")}
-            onMouseLeave={handleMouseLeave}
-          >
-            <div className="flex items-center cursor-pointer">
-              <span>Services</span>
-              <ChevronDown className="ml-2 w-4 h-4 text-white" />
-            </div>
-            {hoveredMenu === "services" && (
-              <div className="absolute left-0 mt-5 w-72 bg-white text-black shadow-lg rounded-xl p-6">
-                <div className="w-full gap-4 pl-2">
-                  <div>
-                    <div className="py-1">
-                      <h5 className="text-lg font-bold mb-2">Our Services</h5>
-                      <hr />
-                    </div>
-                    <ul className="space-y-1 text-md">
-                      <li><Link href="/services/long-distance-moving" className="text-gray-700 hover:text-blue-500">Long Distance Moving</Link></li>
-                      <li><Link href="/services/auto-transport" className="text-gray-700 hover:text-blue-500">Auto Transport</Link></li>
-                      <li><Link href="/services/storage-solutions" className="text-gray-700 hover:text-blue-500">Storage Solutions</Link></li>
-                      <li><Link href="/services/home-changes" className="text-gray-700 hover:text-blue-500">Home Changes</Link></li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
-          </li> */}
-
-          {/* About Dropdown */}
           <li>
             <Link href="/about-us">About Us</Link>
           </li>
@@ -243,8 +239,7 @@ const HeaderMenu: React.FC = () => {
                     />
                     <h4 className="text-lg font-bold">Explore Blogs</h4>
                     <p className="text-gray-600">
-                      Discover insights, tips, and stories on a variety of
-                      topics.
+                      Discover insights, tips, and stories on a variety of topics.
                     </p>
                   </div>
 
@@ -264,26 +259,25 @@ const HeaderMenu: React.FC = () => {
                           placeholder="Search blogs..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full px-2 py-1 pl-12 rounded-xl bg-white text-black placeholder-gray-600 focus:outline-none focus:ring-orange-500 shadow-sm border border-orange-600 transition-all duration-300"
+                          className="w-full px-2 py-1 pl-4 rounded-xl bg-white text-black placeholder-gray-600 focus:outline-none focus:ring-orange-500 shadow-sm border border-orange-600 transition-all duration-300"
                         />
                         <hr />
                       </div>
 
                       <div className="scrollbar mt-4 space-y-3">
                         {blogsLoading ? (
-                          <p className="text-gray-500 text-sm">
-                            Loading blogs...
-                          </p>
+                          <p className="text-gray-500 text-sm">Loading blogs...</p>
                         ) : blogsError ? (
                           <p className="text-red-600 text-sm">{blogsError}</p>
                         ) : filteredBlogs.length > 0 ? (
                           filteredBlogs.map((blog) => (
                             <div
                               key={blog.id}
-                              className="group p-2 rounded-xl hover:from-orange-500 hover:to-orange-900 transition-colors duration-300 ease-in-out shadow-md"
+                              className="group p-2 rounded-xl transition-colors duration-300 ease-in-out shadow-md"
                             >
+                              {/* ✅ slug-based route */}
                               <Link
-                                href={`/blog/${blog.id}`}
+                                href={`/${encodeURIComponent(blog.slug)}`}
                                 className="text-sm sm:text-base font-medium text-gray-800 hover:underline hover:text-orange-600"
                               >
                                 {renderHighlightedTitle(
@@ -294,9 +288,7 @@ const HeaderMenu: React.FC = () => {
                             </div>
                           ))
                         ) : (
-                          <p className="text-red-800 text-sm">
-                            No blogs found...
-                          </p>
+                          <p className="text-red-800 text-sm">No blogs found...</p>
                         )}
                       </div>
                     </div>
@@ -331,7 +323,7 @@ const HeaderMenu: React.FC = () => {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <ul className="absolute top-16 left-0 w-full bg-white shadow-md flex flex-col text-lg md:hidden">
+        <ul className="absolute top-16 left-0 w-full bg-white shadow-md flex flex-col text-lg md:hidden text-black">
           <li className="px-4 py-2 border-b">
             <Link href="/home">Home</Link>
           </li>
